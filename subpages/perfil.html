@@ -1,47 +1,120 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, getDocs, getDoc, doc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Emergência</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 pb-12 font-sans">
 
- const firebaseConfig = {
-    apiKey: "AIzaSyCffiFbyNzZz7M9bbNVg6XQaEht-QWHuXU",
-    authDomain: "http://sos-pulseiras.firebaseapp.com",
-    projectId: "sos-pulseiras",
-    storageBucket: "http://sos-pulseiras.firebasestorage.app",
-    messagingSenderId: "940338535189",
-    appId: "1:940338535189:web:6f039855d2f96258cca71c"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    <div id="conteudo-perfil" class="max-w-md mx-auto space-y-6">
+        <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+            <i class="ph ph-circle-notch animate-spin text-4xl mb-4"></i>
+            <p class="font-bold uppercase tracking-widest text-xs">Buscando dados na nuvem...</p>
+        </div>
+    </div>
 
-  async function carregarPerfil() {
-    const params = new URLSearchParams(window.location.search);
-    const idDono = params.get('id');
-    const container = document.getElementById('conteudo-perfil');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, getDoc, getDocs, doc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    if (!idDono) return;
+        // CONFIGURAÇÃO DO SEU FIREBASE (DEVE SER IGUAL AO DO INDEX.HTML)
+         const firebaseConfig = {
+        apiKey: "AIzaSyCffiFbyNzZz7M9bbNVg6XQaEht-QWHuXU",
+        authDomain: "http://sos-pulseiras.firebaseapp.com",
+        projectId: "sos-pulseiras",
+        storageBucket: "http://sos-pulseiras.firebasestorage.app",
+        messagingSenderId: "940338535189",
+        appId: "1:940338535189:web:6f039855d2f96258cca71c",
+      };
 
-    // Buscar dono e todos os outros amigos em paralelo
-    const donoSnap = await getDoc(doc(db, "amigos", idDono));
-    const todosSnap = await getDocs(collection(db, "amigos"));
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    if (donoSnap.exists()) {
-      const dono = donoSnap.data();
-      let outrosHTML = '';
+        async function carregarDados() {
+            const container = document.getElementById('conteudo-perfil');
+            const params = new URLSearchParams(window.location.search);
+            const idDono = params.get('id');
 
-      todosSnap.forEach(s => {
-        if(s.id !== idDono) {
-          const a = s.data();
-          outrosHTML += `
-            <div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm">
-                <p class="font-bold text-slate-700 text-sm">${a.nome.split(' ')[0]}</p>
-                <a href="tel:${a.tel}" class="text-green-500"><i class="ph ph-phone-fill text-xl"></i></a>
-            </div>`;
+            if (!idDono) {
+                container.innerHTML = "<div class='text-center py-20 font-bold text-slate-400 uppercase'>ID não fornecido</div>";
+                return;
+            }
+
+            try {
+                // 1. Busca os dados do dono da pulseira
+                const donoSnap = await getDoc(doc(db, "amigos", idDono));
+                
+                // 2. Busca todos os contatos para a rede de amigos
+                const todosSnap = await getDocs(collection(db, "amigos"));
+
+                if (donoSnap.exists()) {
+                    const dono = donoSnap.data();
+                    let outrosHTML = "";
+
+                    // Filtra os outros amigos
+                    todosSnap.forEach(s => {
+                        if (s.id !== idDono) {
+                            const a = s.data();
+                            outrosHTML += `
+                                <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="bg-slate-100 p-2 rounded-xl"><i class="ph ph-user text-slate-400"></i></div>
+                                        <p class="font-bold text-slate-700 text-sm uppercase">${a.nome.split(' ')[0]}</p>
+                                    </div>
+                                    <a href="tel:${a.tel}" class="text-green-500 bg-green-50 w-10 h-10 flex items-center justify-center rounded-xl">
+                                        <i class="ph ph-phone-fill text-xl"></i>
+                                    </a>
+                                </div>`;
+                        }
+                    });
+
+                    // Injeta o HTML completo
+                    container.innerHTML = `
+                        <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+                            <div class="bg-red-600 p-8 text-center text-white">
+                                <div class="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="ph ph-first-aid text-3xl font-bold"></i>
+                                </div>
+                                <h1 class="text-2xl font-black uppercase tracking-tight">${dono.nome}</h1>
+                                <span class="inline-block mt-2 px-4 py-1 bg-white text-red-600 rounded-full font-black text-sm uppercase">SANGUE ${dono.sangue || '--'}</span>
+                            </div>
+
+                            <div class="p-8 space-y-6">
+                                <div class="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
+                                    <h3 class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Alergias / Restrições</h3>
+                                    <p class="text-slate-700 font-bold">${dono.alergias || 'Nenhuma informada'}</p>
+                                </div>
+
+                                <a href="tel:${dono.tel}" class="flex items-center justify-between bg-green-500 text-white p-5 rounded-3xl shadow-lg shadow-green-100 active:scale-95 transition-all">
+                                    <div class="flex items-center gap-4">
+                                        <i class="ph ph-phone-call-fill text-3xl"></i>
+                                        <div class="text-left">
+                                            <p class="text-xs opacity-80 font-bold uppercase tracking-wider italic">Emergência</p>
+                                            <p class="text-lg font-black leading-tight">LIGAR AGORA</p>
+                                        </div>
+                                    </div>
+                                    <i class="ph ph-caret-right text-xl opacity-50"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h3 class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] ml-5">Rede de Apoio</h3>
+                            ${outrosHTML || '<p class="text-center text-xs text-slate-300 italic">Nenhum outro contato cadastrado.</p>'}
+                        </div>`;
+                } else {
+                    container.innerHTML = "<div class='text-center py-20 font-bold text-slate-400'>PERFIL NÃO ENCONTRADO NO FIREBASE</div>";
+                }
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class='text-center py-20 text-red-500 font-bold'>ERRO NA CONEXÃO: <br> <span class="text-xs font-normal text-slate-500">${error.message}</span></div>`;
+            }
         }
-      });
 
-      // Renderiza o HTML (Use o template que já criamos antes, injetando as variáveis)
-      container.innerHTML = `... (insira o template HTML do perfil aqui usando as variáveis dono.nome, dono.alergias, etc) ...`;
-    }
-  }
-  carregarPerfil();
-</script>
+        carregarDados();
+    </script>
+</body>
+</html>
